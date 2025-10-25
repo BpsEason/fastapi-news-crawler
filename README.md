@@ -1,4 +1,3 @@
-```markdown
 # FastAPI 新聞爬蟲 API — 非同步爬取 + 自動排程 + 視覺化分析
 
 > **作品集級後端系統**：自動化爬取科技新聞 → PostgreSQL 儲存 → 安全 API 提供 → Streamlit 即時儀表板  
