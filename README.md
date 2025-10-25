@@ -1,87 +1,211 @@
+```markdown
 # FastAPI 新聞爬蟲 API — 非同步爬取 + 自動排程 + 視覺化分析
 
-> **現代化作品集範例：** 自動爬取科技新聞 → 儲存至 PostgreSQL → 提供帶有 API Key 驗證的 API → Streamlit 顯示趨勢。
+> **作品集級後端系統**：自動化爬取科技新聞 → PostgreSQL 儲存 → 安全 API 提供 → Streamlit 即時儀表板  
+> 完整模組化設計，支援 Docker 部署、異步測試與 CI/CD。
 
-| 元素 | 技術棧 | 描述 |
-| :--- | :--- | :--- |
-| **後端框架** | `FastAPI` | 高效能非同步 API 服務。 |
-| **爬蟲** | `httpx` + `BeautifulSoup` | 非同步 HTTP 請求，增強效率。 |
-| **資料庫** | `PostgreSQL` + `SQLModel` | 穩定可靠的關聯式資料庫，使用異步連線 (AsyncPG)。 |
-| **排程** | `APScheduler` | 定時自動執行爬蟲任務。 |
-| **驗證** | `API Key Header` | 所有 API 端點皆受保護。 |
-| **部署** | `Docker Compose` | 一鍵啟動 Web 服務與 PostgreSQL 資料庫。 |
-| **前端** | `Streamlit` | 輕量級儀表板，即時展示數據。 |
-| **CI/CD** | `GitHub Actions` | 自動化測試流程。 |
+---
 
-## 專案架構 (模組化設計)
+## 專案動機與背景
+
+本專案展示如何以 **FastAPI** 為核心，建構一個 **可生產、易擴充、具備完整生命週期** 的資料處理系統。
+
+適用場景：
+- 技術作品集展示
+- 面試技術挑戰
+- 教學範例專案
+- 真實新聞資料 API 後端
+
+---
+
+## 技術棧總覽
+
+| 功能 | 技術 | 說明 |
+|------|------|------|
+| **後端框架** | `FastAPI` | 非同步、高效能、自動產生 Swagger UI |
+| **爬蟲** | `httpx` + `BeautifulSoup` | 非同步請求 + HTML 解析 |
+| **資料庫** | `PostgreSQL` + `SQLModel` + `asyncpg` | ORM + 索引 + 去重機制 |
+| **驗證** | `X-API-Key` Header | 集中式安全管理 |
+| **排程** | `APScheduler` | 定時自動執行爬蟲 |
+| **前端** | `Streamlit` | 互動式資料視覺化 |
+| **部署** | `Docker Compose` | 一鍵啟動 FastAPI + DB |
+| **測試** | `pytest-asyncio` | 完整異步流程測試 |
+| **CI/CD** | `GitHub Actions` | 自動化測試與覆蓋率 |
+
+---
+
+## 專案結構
 
 ```
 fastapi-news-crawler/
 ├── app/
 │   ├── core/            ← 設定與安全 (config.py, security.py)
-│   ├── database/        ← 資料庫模型與連線 (models.py, __init__.py)
-│   ├── services/        ← 核心業務邏輯 (crawler.py, scheduler.py)
-│   ├── api/v1/          ← API 路由 (news.py)
-│   └── main.py          ← 應用程式啟動點
+│   ├── database/        ← 模型與異步連線
+│   ├── services/        ← 爬蟲與排程邏輯
+│   ├── api/v1/endpoints/← API 路由
+│   └── main.py          ← 應用啟動與生命週期
 ├── frontend/app.py      ← Streamlit 儀表板
-├── tests/               ← pytest 異步測試
-├── docker-compose.yml   ← Docker 部署配置
-├── .github/workflows/ci.yml ← GitHub Actions
+├── tests/               ← 異步測試
+├── docker-compose.yml   ← Docker 部署
+├── .github/workflows/ci.yml ← CI/CD
+├── .env.example         ← 環境變數範本
+├── requirements.txt
 └── README.md
 ```
 
-## 安裝與啟動 (Docker Compose 推薦)
+---
 
-此專案設計用於 Docker 環境，以提供 PostgreSQL 數據庫服務。
+## 快速啟動
 
-### 1. 本地啟動 (Docker 推薦)
-
-確保您已安裝 Docker 和 Docker Compose。
+### 1. 複製環境變數範本
 
 ```bash
-# 1. 執行此腳本 (setup_portfolio.sh) 以生成所有檔案
+cp .env.example .env
+```
 
-# 2. 使用 Docker Compose 一鍵啟動服務與資料庫
-# 首次啟動可能需要幾分鐘來下載 PostgreSQL 映像和安裝依賴
+編輯 `.env`：
+```env
+DATABASE_URL=postgresql+asyncpg://user:password@db:5432/news_db
+API_KEY_SECRET=your-super-secret-key-here
+CRAWL_TARGET_URL=https://example.com/news
+CRAWL_INTERVAL_HOURS=6
+```
+
+### 2. Docker 一鍵啟動
+
+```bash
 docker compose up --build -d
 ```
 
-### 2. 存取服務
-
-服務啟動後：
-
-- **FastAPI API 文件 (Swagger UI):** `http://localhost:8000/docs`
-- **Streamlit 儀表板:** `http://localhost:8501` (需要額外啟動，見下一步驟)
-
-### 3. 啟動 Streamlit 前端 (選用)
-
-在專案根目錄下，虛擬環境已啟動：
+### 3. 啟動 Streamlit 前端
 
 ```bash
-# 安裝 streamlit (若 requirements.txt 中未包含)
 pip install streamlit pandas
-
-# 運行前端儀表板 (Streamlit 預設運行在 8501 Port)
 streamlit run frontend/app.py
 ```
 
-## API 驗證與測試
+---
 
-- **預設 API Key:** `your-api-key-secret-placeholder`
-- **手動觸發爬蟲 (需 Key):** `POST http://localhost:8000/crawl/now`
-- **查詢數據 (需 Key):** `GET http://localhost:8000/api/v1/articles`
+## 服務入口
 
-### 執行單元測試
+| 服務 | 網址 | 備註 |
+|------|------|------|
+| **API 文件** | [http://localhost:8000/docs](http://localhost:8000/docs) | Swagger UI |
+| **首頁** | [http://localhost:8000](http://localhost:8000) | 歡迎訊息 |
+| **儀表板** | [http://localhost:8501](http://localhost:8501) | Streamlit 前端 |
 
-使用 `pytest-asyncio` 測試異步邏輯和 API 驗證：
+---
+
+## API 使用範例
+
+所有請求 **必須包含 `X-API-Key` header**
+
+### 手動觸發爬蟲
 
 ```bash
-pytest tests/
+curl -X POST http://localhost:8000/crawl/now \
+  -H "X-API-Key: your-super-secret-key-here"
 ```
 
-## 延伸練習題 (作品集升級點)
+### 取得文章（分頁）
 
-1.  **Alembic Migration:** 導入 Alembic 進行資料庫 Schema 版本控制。
-2.  **真實爬蟲:** 將 `app/services/crawler.py` 替換為使用 Playwright 抓取真實 JS 渲染網站。
-3.  **異步排程:** 調整 `app/services/scheduler.py` 以使用 Celery 處理更複雜、分佈式的排程任務。
-4.  **數據清洗:** 在爬蟲服務中加入 NLTK 或 spaCy 進行關鍵字提取和情緒分析。
+```bash
+curl "http://localhost:8000/api/v1/articles?offset=0&limit=10" \
+  -H "X-API-Key: your-super-secret-key-here"
+```
+
+回應範例：
+```json
+[
+  {
+    "id": 1,
+    "title": "非同步爬蟲優勢分析",
+    "url": "https://example.com/post/1",
+    "category": "Tech",
+    "crawled_at": "2025-04-05T12:00:00Z"
+  }
+]
+```
+
+---
+
+## Streamlit 前端功能
+
+- 即時文章列表（標題、網址、時間）
+- 類別分佈長條圖
+- 總文章數與類別數統計
+- 手動觸發爬蟲按鈕（需 API Key）
+- 自動緩存與錯誤處理
+
+> 建議截圖展示於 GitHub 首頁
+
+---
+
+## 測試與 CI/CD
+
+### 本地測試
+
+```bash
+pytest tests/ --cov=app
+```
+
+涵蓋：
+- API Key 驗證
+- 爬蟲 → 儲存 → 讀取完整流程
+- 資料結構正確性
+
+### GitHub Actions
+
+自動執行：
+- Python 依賴安裝
+- 使用 SQLite 模擬 PostgreSQL
+- 執行所有測試
+- 產生覆蓋率報告
+
+---
+
+## 延伸練習（作品集升級）
+
+| 難度 | 功能 | 建議技術 |
+|------|------|----------|
+| 中 | 資料庫遷移 | `Alembic` |
+| 中 | 動態網頁爬蟲 | `Playwright` |
+| 高 | 分佈式排程 | `Celery + Redis` |
+| 高 | 文字分析 | `spaCy` / `NLTK` |
+| 高 | 進階驗證 | `OAuth2` / `JWT` |
+| 高 | 快取與限流 | `Redis` + `slowapi` |
+
+---
+
+## 雲端部署建議
+
+### Render（免費）
+
+1. 推到 GitHub
+2. 建立 Web Service
+3. 設定環境變數
+4. 自動部署
+
+### Fly.io
+
+```bash
+fly launch
+fly deploy
+```
+
+---
+
+## 安全提示
+
+- `.env` 已加入 `.gitignore`
+- 建議生產環境使用 `bcrypt` 加密 API Key
+- 資料庫密碼請定期輪替
+
+---
+
+## 授權
+
+[MIT License](LICENSE)  
+可自由使用、修改、商業應用，請保留原始作者資訊。
+
+---
