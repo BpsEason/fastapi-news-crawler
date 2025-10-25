@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: news_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      # 為了本地開發方便，暴露 port (正式環境可以移除)
+      - "5432:5432" 
+
+  web:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      # 連線字串必須匹配 PostgreSQL service 名稱和 credentials
+      DATABASE_URL: postgresql+asyncpg://user:password@db:5432/news_db
+      API_KEY_SECRET: your-api-key-secret-placeholder # 請替換為更安全的密鑰
+    restart: on-failure
+
+volumes:
+  postgres_data:
